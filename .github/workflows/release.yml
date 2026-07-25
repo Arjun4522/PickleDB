@@ -11,7 +11,7 @@ jobs:
     outputs:
       upload_url: ${{ steps.create_release.outputs.upload_url }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: create_release
         uses: softprops/action-gh-release@v1
         with:
@@ -24,7 +24,7 @@ jobs:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@master
         with:
           toolchain: stable
