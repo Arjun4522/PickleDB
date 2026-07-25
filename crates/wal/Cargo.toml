@@ -8,4 +8,4 @@ license.workspace = true
 pickledb-core = { path = "../core" }
 thiserror = "1"
 serde = { version = "1", features = ["derive"] }
-bincode = "1"
+bincode = "3"

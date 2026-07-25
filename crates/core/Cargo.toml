@@ -9,4 +9,4 @@ serde = { version = "1", features = ["derive"] }
 thiserror = "1"
 
 [dev-dependencies]
-bincode = "1"
+bincode = "3"
