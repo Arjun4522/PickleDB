@@ -21,7 +21,7 @@ All contributors must adhere to our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 ```bash
 # Clone the repository
-git clone https://github.com/pickledb/pickledb.git
+git clone https://github.com/Arjun4522/PickleDB.git
 cd pickledb
 
 # Build all crates
@@ -144,6 +144,6 @@ benches/      Benchmarks
 
 ## Getting Help
 
-- Open a [Discussion](https://github.com/pickledb/pickledb/discussions)
+- Open a [Discussion](https://github.com/Arjun4522/PickleDB/discussions)
 - Join our [Discord](https://discord.gg/pickledb)
 - Read the [Architecture Guide](ARCHITECTURE.md)

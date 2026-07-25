@@ -3,13 +3,11 @@
 
 > **Zero-Trust Encrypted Database Engine for Rust**
 
-[![Crates.io](https://img.shields.io/crates/v/pickledb-core?style=flat-square&logo=rust)](https://crates.io/crates/pickledb-core)
+[![Crates.io](https://img.shields.io/badge/crates.io-0.1.0-orange?style=flat-square&logo=rust)](https://crates.io/crates/pickledb-core)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
 [![Rust](https://img.shields.io/badge/rust-1.75+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
-[![CI](https://img.shields.io/github/actions/workflow/status/pickledb/pickledb/ci.yml?style=flat-square&logo=github)](https://github.com/pickledb/pickledb/actions)
-[![Coverage](https://img.shields.io/codecov/c/github/pickledb/pickledb?style=flat-square&logo=codecov)](https://codecov.io/gh/pickledb/pickledb)
-[![Docs](https://img.shields.io/docsrs/pickledb-core?style=flat-square&logo=docsdotrs)](https://docs.rs/pickledb-core)
-[![Downloads](https://img.shields.io/crates/d/pickledb-core?style=flat-square)](https://crates.io/crates/pickledb-core)
+[![CI](https://img.shields.io/github/actions/workflow/status/Arjun4522/PickleDB/.github/workflows/ci.yml?style=flat-square&logo=github)](https://github.com/Arjun4522/PickleDB/actions)
+[![Docs](https://img.shields.io/badge/docs-rustdoc-blue?style=flat-square&logo=docsdotrs)](https://docs.rs/pickledb-core)
 [![Built with](https://img.shields.io/badge/built%20with-Rust-red?style=flat-square&logo=rust)](https://www.rust-lang.org)
 
 ---
