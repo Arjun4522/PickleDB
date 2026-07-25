@@ -1,0 +1,12 @@
+[package]
+name = "pickledb-cli"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pickledb-core = { path = "../core" }
+pickledb-engine = { path = "../engine" }
+pickledb-crypto = { path = "../crypto" }
+anyhow = "1"
+hex = "0.4"

@@ -1,0 +1,11 @@
+[package]
+name = "pickledb-storage"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+pickledb-core = { path = "../core" }
+pickledb-pages = { path = "../pages" }
+parking_lot = "0.12"
+thiserror = "1"

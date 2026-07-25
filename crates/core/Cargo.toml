@@ -1,0 +1,12 @@
+[package]
+name = "pickledb-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+thiserror = "1"
+
+[dev-dependencies]
+bincode = "1"
