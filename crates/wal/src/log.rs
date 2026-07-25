@@ -28,6 +28,7 @@ pub struct WalLog {
     file: File,
     current_lsn: LSN,
     checkpoint_lsn: LSN,
+    entry_count: u64,
 }
 
 impl WalLog {
@@ -44,6 +45,7 @@ impl WalLog {
             file,
             current_lsn: LSN(0),
             checkpoint_lsn: LSN(0),
+            entry_count: 0,
         })
     }
 
@@ -51,6 +53,7 @@ impl WalLog {
     pub fn append(&mut self, operation: WalOperation) -> Result<LSN, WalError> {
         let next_lsn = LSN(self.current_lsn.0 + 1);
         self.current_lsn = next_lsn;
+        self.entry_count += 1;
 
         let entry = WalEntry {
             lsn: next_lsn,
@@ -75,6 +78,7 @@ impl WalLog {
     pub fn replay(&mut self) -> Result<Vec<WalEntry>, WalError> {
         let mut entries = Vec::new();
         self.file.seek(SeekFrom::Start(0))?;
+        let mut count: u64 = 0;
 
         loop {
             let mut len_buf = [0u8; 4];
@@ -92,6 +96,7 @@ impl WalLog {
                 .map_err(|_e| WalError::CorruptEntry(0))?;
 
             let entry_lsn = entry.lsn;
+            count += 1;
             if entry.lsn > self.checkpoint_lsn {
                 entries.push(entry);
             }
@@ -100,6 +105,7 @@ impl WalLog {
             }
         }
 
+        self.entry_count = count;
         Ok(entries)
     }
 
@@ -138,6 +144,17 @@ impl WalLog {
     pub fn sync(&mut self) -> Result<(), WalError> {
         self.file.flush()?;
         self.file.sync_all()?;
+        Ok(())
+    }
+
+    /// Return the number of entries in the WAL.
+    pub fn entry_count(&self) -> u64 {
+        self.entry_count
+    }
+
+    /// Verify WAL integrity by replaying and checking for errors.
+    pub fn verify_integrity(&mut self) -> Result<(), WalError> {
+        self.replay()?;
         Ok(())
     }
 }

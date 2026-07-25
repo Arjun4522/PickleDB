@@ -1,0 +1,40 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+jobs:
+  create-release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: create_release
+        uses: softprops/action-gh-release@v1
+        with:
+          name: PickleDB ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+  publish-crates:
+    name: Publish to crates.io
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - run: cargo publish -p pickledb-core
+      - run: cargo publish -p pickledb-crypto
+      - run: cargo publish -p pickledb-pages
+      - run: cargo publish -p pickledb-storage
+      - run: cargo publish -p pickledb-wal
+      - run: cargo publish -p pickledb-cache
+      - run: cargo publish -p pickledb-index
+      - run: cargo publish -p pickledb-engine
+      - run: cargo publish -p pickledb-ffi
+      - run: cargo publish -p pickledb-cli

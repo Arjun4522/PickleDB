@@ -27,7 +27,7 @@ pub struct PickleEngine {
     page_allocator: RwLock<PageAllocator>,
     record_map: RwLock<HashMap<RecordId, (PageId, u16)>>,
     record_tokens: RwLock<HashMap<RecordId, Vec<SearchToken>>>,
-    _dir: String,
+    dir: String,
 }
 
 impl PickleEngine {
@@ -47,7 +47,7 @@ impl PickleEngine {
             page_allocator: RwLock::new(page_allocator),
             record_map: RwLock::new(HashMap::new()),
             record_tokens: RwLock::new(HashMap::new()),
-            _dir: dir.to_string(),
+            dir: dir.to_string(),
         };
 
         // Recover from WAL
@@ -157,6 +157,48 @@ impl PickleEngine {
         let page_id = self.page_allocator.write().allocate();
         let page = SlottedPage::new(PageType::Data, page_id);
         Ok((page, page_id))
+    }
+}
+
+impl PickleEngine {
+    /// Return the database directory path.
+    pub fn dir(&self) -> &str {
+        &self.dir
+    }
+
+    /// Return a reference to the file manager.
+    pub fn file_manager(&self) -> &RwLock<FileManager> {
+        &self.file_manager
+    }
+
+    /// Return a reference to the WAL.
+    pub fn wal(&self) -> &RwLock<WalLog> {
+        &self.wal
+    }
+
+    /// Return a reference to the search index.
+    pub fn index(&self) -> &HashIndex {
+        &self.index
+    }
+
+    /// Return a reference to the buffer pool.
+    pub fn buffer_pool(&self) -> &RwLock<BufferPool> {
+        &self.buffer_pool
+    }
+
+    /// Return a reference to the page allocator.
+    pub fn page_allocator(&self) -> &RwLock<PageAllocator> {
+        &self.page_allocator
+    }
+
+    /// Return a reference to the record map.
+    pub fn record_map(&self) -> &RwLock<HashMap<RecordId, (PageId, u16)>> {
+        &self.record_map
+    }
+
+    /// Return a reference to the record tokens map.
+    pub fn record_tokens(&self) -> &RwLock<HashMap<RecordId, Vec<SearchToken>>> {
+        &self.record_tokens
     }
 }
 

@@ -1,1 +1,29 @@
 /target
+
+# Build artifacts
+*.o
+*.so
+*.dylib
+*.dll
+*.a
+*.lib
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.wal
+*.pickledb
+
+# Environment
+.env
+.env.*

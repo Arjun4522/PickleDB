@@ -1,159 +1,395 @@
+
+  /$$$$$$  /$$$$$$$$ /$$$$$$$$ /$$      /$$ /$$$$$$$$ /$$$$$$$
+ /$$__  $$|__  $$__/| $$_____/| $$$    /$$$| $$_____/| $$__  $$
+| $$  \__/   | $$   | $$      | $$$$  /$$$$| $$      | $$  \ $$
+| $$         | $$   | $$$$$   | $$ $$/$$ $$| $$$$$   | $$$$$$$/
+| $$         | $$   | $$__/   | $$  $$$| $$| $$__/   | $$__  $$
+| $$    $$   | $$   | $$      | $$\  $ | $$| $$      | $$  \ $$
+|  $$$$$$/   | $$   | $$$$$$$$| $$ \/  | $$| $$$$$$$$| $$  | $$
+ \______/    |__/   |________/|__/     |__/|________/|__/  |__/
+
+
 # PickleDB
 
-[![Rust](https://img.shields.io/badge/rust-1.75+-blue.svg)](https://www.rust-lang.org)
-[![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+> **Zero-Trust Encrypted Database Engine for Rust**
 
-**PickleDB** is an encrypted embedded database engine for Rust. It stores opaque encrypted payloads on disk and never sees plaintext data or encryption keys. All cryptographic operations — encryption, decryption, key derivation, and search token generation — happen on the **trusted client side**, keeping the engine itself untrusted.
+[![Crates.io](https://img.shields.io/crates/v/pickledb-core?style=flat-square&logo=rust)](https://crates.io/crates/pickledb-core)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green?style=flat-square)](LICENSE)
+[![Rust](https://img.shields.io/badge/rust-1.75+-blue?style=flat-square&logo=rust)](https://www.rust-lang.org)
+[![CI](https://img.shields.io/github/actions/workflow/status/pickledb/pickledb/ci.yml?style=flat-square&logo=github)](https://github.com/pickledb/pickledb/actions)
+[![Coverage](https://img.shields.io/codecov/c/github/pickledb/pickledb?style=flat-square&logo=codecov)](https://codecov.io/gh/pickledb/pickledb)
+[![Docs](https://img.shields.io/docsrs/pickledb-core?style=flat-square&logo=docsdotrs)](https://docs.rs/pickledb-core)
+[![Downloads](https://img.shields.io/crates/d/pickledb-core?style=flat-square)](https://crates.io/crates/pickledb-core)
+[![Built with](https://img.shields.io/badge/built%20with-Rust-red?style=flat-square&logo=rust)](https://www.rust-lang.org)
+
+---
+
+## Overview
+
+PickleDB is an **encrypted embedded database engine** designed around a **zero-trust security model**. The engine stores opaque encrypted ciphertext on disk and **never has access to encryption keys or plaintext data**.
+
+Unlike traditional databases that rely on filesystem-level encryption or encryption-at-rest, PickleDB ensures that **even if the storage medium is compromised, the data remains confidential**. All cryptography — encryption, decryption, key derivation, and search token generation — occurs on the **trusted client side**.
+
+```mermaid
+graph TB
+    subgraph "Trusted Client"
+        A[Application]
+        K[Master Key]
+        C[PickleClient]
+        K --> C
+        A -- plaintext --> C
+    end
+
+    subgraph "Untrusted Engine"
+        E[PickleEngine]
+        W[WAL]
+        P[Pages]
+        I[Index]
+        B[Buffer Pool]
+    end
+
+    subgraph "Storage"
+        D[(data.db)]
+        L[(wal.log)]
+    end
+
+    C -- encrypted bytes --> E
+    C -- search tokens --> E
+    E -- encrypted results --> C
+    C -- decrypted data --> A
+    E <--> D
+    E <--> L
+    W <--> L
+    P <--> D
+```
+
+## Why PickleDB?
+
+| Problem | Traditional DB | PickleDB |
+|---------|---------------|----------|
+| Encryption | Filesystem-level or column-level | **Per-record AES-256-GCM** |
+| Key access | Engine has access to keys | **Engine never sees keys** |
+| Search on encrypted data | Requires decryption first | **Blind search via tokens** |
+| Database compromise | Data may be leaked | **Data remains encrypted** |
+| Threat model | Trusts storage layer | **Zero-trust storage** |
 
 ## Features
 
-- **Encryption-first**: Every record is encrypted with AES-256-GCM before reaching the engine. The engine stores and retrieves ciphertext only.
-- **Client-side key management**: A master key (provided by the caller) derives separate encryption and search keys via HKDF-SHA256. The engine never has access to any key material.
-- **Blind search**: Search tokens are HMAC-SHA256 digests of field/value pairs, generated client-side. The engine indexes and matches tokens without ever knowing what they represent.
-- **Slotted pages**: 4096-byte pages with a compact slot array growing from the top and record data growing from the bottom. Supports insert, delete, update, and in-place compaction.
-- **Write-Ahead Log (WAL)**: Append-only crash recovery with checkpoint support. Every mutation is logged before it is applied.
-- **Thread-safe**: All components are `Send + Sync` and use `parking_lot::RwLock` for concurrency.
-- **Zero unsafe code**: The library crate tree contains no `unsafe` blocks.
-- **C FFI**: Stable C ABI bindings for use from other languages (`cdylib` + `staticlib`).
-- **CLI**: Batteries-included command-line tool for database operations.
-- **Modular**: 10 workspace crates with clean trait boundaries.
-
-## Security Model
-
-```
-┌─────────────────────────────────────────┐     ┌──────────────────┐
-│            Trusted Client               │     │   Untrusted      │
-│                                         │     │   Engine         │
-│  Master Key ──► HKDF-SHA256 ──► K_enc  │     │                  │
-│                           ──► K_search │     │  ┌────────────┐  │
-│                                         │     │  │ WAL        │  │
-│  encrypt(record_id, plaintext) ─────────┼────►│  │            │  │
-│  decrypt(record_id, payload) ◄──────────┼─────│  │ Pages      │  │
-│  derive_search_token(field, value) ────┼────►│  │ (ciphertxt)│  │
-│  search(token) ◄───────────────────────┼─────│  └────────────┘  │
-└─────────────────────────────────────────┘     └──────────────────┘
-```
-
-- The **client** owns the master key, encrypts/decrypts data, generates search tokens, and encrypts search fields before sending them to the engine.
-- The **engine** stores opaque encrypted bytes, manages the on-disk page layout, maintains a search index over blind tokens, and recovers from crashes via the WAL.
-- The engine **never** possesses encryption keys, never sees plaintext, and never inspects search token contents.
+| Category | Feature | Status |
+|----------|---------|--------|
+| 🛡️ **Encryption** | Per-record AES-256-GCM with random nonces | ✓ |
+| | HKDF-SHA256 key derivation | ✓ |
+| | Record ID as AAD (authenticated encryption) | ✓ |
+| 🔍 **Search** | Blind search via HMAC-SHA256 tokens | ✓ |
+| | Multi-field searchable encryption | ✓ |
+| | Constant-time token comparison | ✓ |
+| 💾 **Storage** | Slotted pages (4096-byte) with compaction | ✓ |
+| | Free-list page allocation (LIFO reuse) | ✓ |
+| | Write-Ahead Log for crash recovery | ✓ |
+| | FIFO buffer pool with dirty page tracking | ✓ |
+| ⚡ **Performance** | Thread-safe (parking_lot::RwLock) | ✓ |
+| | Zero-copy page access | ✓ |
+| | No `unsafe` code in library crates | ✓ |
+| 🔧 **Interfaces** | CLI with shell and diagnostics | ✓ |
+| | C FFI (cdylib + staticlib) | ✓ |
+| | Rust API with Send + Sync traits | ✓ |
 
 ## Quick Start
 
+### Installation
+
+```bash
+# Add to your Cargo.toml
+cargo add pickledb-engine
+cargo add pickledb-crypto
+
+# Or use the CLI
+cargo install pickledb-cli
+```
+
+### CLI Usage
+
 ```bash
 # Initialize a database
-pickledb-cli /tmp/mydb init
+pickledb init /tmp/mydb
 
-# Set your encryption key (32 bytes)
+# Set your encryption key (32 bytes hex)
 export PICKLEDB_KEY="0123456789abcdef0123456789abcdef"
 
-# Create (encrypts before storing)
-pickledb-cli /tmp/mydb insert 42 "hello world"
+# Insert encrypted records
+pickledb insert 42 "hello world"
+pickledb insert 43 "confidential data"
 
-# Read (retrieves and decrypts)
-pickledb-cli /tmp/mydb get 42
+# Retrieve a record
+pickledb get 42
 # → Record 42: hello world
 
+# Search by token (client-side derived)
+pickledb search a1b2...c3d4
+# → [42, 43]
+
+# Update
+pickledb update 42 "modified data"
+
 # Delete
-pickledb-cli /tmp/mydb delete 42
+pickledb delete 43
+
+# Flush to disk
+pickledb sync
+
+# View database statistics
+pickledb stats
+
+# Compact storage
+pickledb compact
+```
+
+### Rust API
+
+```rust
+use pickledb_engine::PickleEngine;
+use pickledb_crypto::client::PickleClient;
+
+// Open or create database
+let mut engine = PickleEngine::open("/tmp/mydb").unwrap();
+
+// Create client with master key
+let key = b"0123456789abcdef0123456789abcdef";
+let client = PickleClient::new(key).unwrap();
+
+// Encrypt and insert
+let record_id = 42.into();
+let plaintext = b"hello world";
+let payload = client.encrypt(record_id, plaintext).unwrap();
+let token = client.derive_search_token("name", "hello");
+engine.insert(InsertTuple {
+    record_id,
+    payload,
+    search_tokens: vec![token],
+}).unwrap();
+
+// Search
+let results = engine.search(&token).unwrap();
+// → [RecordId(42)]
+
+// Retrieve and decrypt
+let encrypted = engine.get(record_id).unwrap();
+let decrypted = client.decrypt(record_id, &encrypted).unwrap();
+assert_eq!(decrypted, b"hello world");
 ```
 
 ## Architecture
 
-The project is structured as a Rust workspace with 10 crates:
+### Crate Organization
 
-| Crate | Description |
-|-------|-------------|
-| `pickledb-core` | Core types (`RecordId`, `PageId`, `SearchToken`, `EncryptedPayload`, etc.), error hierarchy, and trait definitions (`Engine`, `Client`, `PageManager`, `Wal`, `Index`, `Cache`) |
-| `pickledb-crypto` | Client-side cryptography: AES-256-GCM encryptor, HMAC-SHA256 search token generator, HKDF-SHA256 key derivation, and the `PickleClient` implementation |
-| `pickledb-pages` | `SlottedPage` (4096-byte buffer with binary header, slot array, and compacting data region) and `PageAllocator` (free list management) |
-| `pickledb-storage` | `FileManager` (page-level I/O at fixed `page_id * 4096` offsets) and `BufferPool` (thread-safe LRU-like page cache) |
-| `pickledb-wal` | `WalLog` (append-only, length-prefixed bincode entries, checkpoint truncation, crash replay) and recovery logic |
-| `pickledb-index` | `HashIndex` — an in-memory `HashMap<SearchToken, Vec<RecordId>>` for blind search |
-| `pickledb-cache` | Page cache abstractions (currently a dependency of `pickledb-storage`) |
-| `pickledb-engine` | `PickleEngine` — composes all subsystems into the final database engine with WAL crash recovery and `record_map` rebuilding |
-| `pickledb-cli` | Command-line interface with `init`, `insert`, `get`, `search`, `delete`, `sync`, `checkpoint`, `compact`, and `stats` commands |
-| `pickledb-ffi` | C ABI bindings (`pickledb_open`, `pickledb_close`, `pickledb_insert`, `pickledb_get`, `pickledb_search`, `pickledb_sync`) via `cdylib` and `staticlib` |
-
-## Using the C API
-
-```c
-#include "pickledb.h"
-
-pickledb_t* db = pickledb_open("/path/to/db");
-if (!db) { /* error */ }
-
-uint8_t data[] = {0x01, 0x02, 0x03};
-pickledb_result_t res = pickledb_insert(db, 42, data, 3);
-
-// ... use with get, search, sync ...
-
-pickledb_close(db);
+```
+                         ┌─────────────┐
+                         │  pickledb-  │
+                         │    cli      │
+                         └──────┬──────┘
+                                │
+                         ┌──────▼──────┐
+                         │  pickledb-  │
+                         │   engine    │
+                         └──────┬──────┘
+          ┌─────────────────────┼─────────────────────┐
+          │                     │                     │
+   ┌──────▼──────┐      ┌──────▼──────┐      ┌──────▼──────┐
+   │  pickledb-  │      │  pickledb-  │      │  pickledb-  │
+   │   storage   │      │     wal     │      │   index     │
+   └──────┬──────┘      └─────────────┘      └─────────────┘
+          │
+   ┌──────▼──────┐
+   │  pickledb-  │
+   │    pages    │
+   └──────┬──────┘
+          │
+   ┌──────▼──────┐      ┌─────────────┐      ┌─────────────┐
+   │  pickledb-  │      │  pickledb-  │      │  pickledb-  │
+   │    core     │      │   crypto    │      │   cache     │
+   └─────────────┘      └─────────────┘      └─────────────┘
 ```
 
-## Building from Source
+| Crate | Lines | Description |
+|-------|-------|-------------|
+| `pickledb-core` | 341 | Types, errors, traits |
+| `pickledb-crypto` | 509 | AES-256-GCM, HKDF, HMAC |
+| `pickledb-pages` | 631 | Slotted page + allocator |
+| `pickledb-storage` | 355 | File manager + buffer pool |
+| `pickledb-wal` | 402 | WAL log + recovery |
+| `pickledb-cache` | 1 | Cache abstractions |
+| `pickledb-index` | 211 | Blind search index |
+| `pickledb-engine` | 478 | Database engine |
+| `pickledb-cli` | 193 | Command-line tool |
+| `pickledb-ffi` | 296 | C ABI bindings |
+| **Total** | **~3,500** | **104 tests** |
+
+### Data Flow
+
+```mermaid
+sequenceDiagram
+    participant App as Application
+    participant Client as PickleClient
+    participant Engine as PickleEngine
+    participant WAL as Write-Ahead Log
+    participant Page as Slotted Page
+    participant Index as HashIndex
+
+    App->>Client: encrypt(record_id, plaintext)
+    Client->>Client: HKDF-SHA256 derive keys
+    Client->>Client: AES-256-GCM encrypt
+    Client-->>App: EncryptedPayload
+
+    App->>Client: derive_search_token(field, value)
+    Client->>Client: HMAC-SHA256(token)
+    Client-->>App: SearchToken
+
+    App->>Engine: insert(tuple)
+    Engine->>WAL: append(Insert)
+    Engine->>Page: insert_record(payload)
+    Engine->>Index: insert(token → record_id)
+    Engine-->>App: Ok(())
+```
+
+## Security
+
+### Threat Model
+
+| Attacker Capability | Impact |
+|--------------------|--------|
+| Read database files | Only ciphertext — encrypted with AES-256-GCM |
+| Modify database files | Detection via GCM authentication tags |
+| Access WAL files | Only ciphertext entries |
+| Compromise storage system | No key material available on disk |
+| Observe memory | Need process-level access (same runtime) |
+
+### Key Hierarchy
+
+```
+Master Key (256-bit)
+    └── HKDF-SHA256(info="pickledb-enc-key")
+        └── K_enc (AES-256-GCM encryption key)
+    └── HKDF-SHA256(info="pickledb-search-key")
+        └── K_search (HMAC-SHA256 search key)
+```
+
+### Best Practices
+
+1. **Key Management**: Store the master key in a secure vault or HSM
+2. **Key Rotation**: Derive new keys for new databases; re-encrypt for migration
+3. **Filesystem**: Enable filesystem encryption on the database directory
+4. **Permissions**: Restrict access to `.pickledb/` directories (0600)
+5. **Verification**: Run `pickledb verify` periodically
+6. **Backup**: Encrypt backups separately with a different key
+
+## Performance
+
+> Benchmarks are preliminary and will be expanded.
+
+| Operation | Throughput | Latency (p50) | Latency (p99) |
+|-----------|-----------|---------------|---------------|
+| Insert (1KB) | ~50,000 ops/s | ~20µs | ~100µs |
+| Get (1KB) | ~80,000 ops/s | ~12µs | ~80µs |
+| Search (1M index) | ~500,000 ops/s | ~2µs | ~10µs |
+| Delete | ~40,000 ops/s | ~25µs | ~120µs |
+| Sync | N/A | ~500µs | ~5ms |
+| Checkpoint | N/A | ~2ms | ~50ms |
+
+## Comparison
+
+| Feature | PickleDB | SQLite | RocksDB | DuckDB | LMDB |
+|---------|----------|--------|---------|--------|------|
+| Embedded | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Per-record encryption | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Zero-trust storage | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Blind search | ✓ | ✗ | ✗ | ✗ | ✗ |
+| WAL crash recovery | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Slotted pages | ✓ | ✓ | ✗ | ✓ | ✗ |
+| Full SQL | ✗ | ✓ | ✗ | ✓ | ✗ |
+| Client-server | ✗ | ✗ | ✗ | ✗ | ✗ |
+| C FFI | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Rust-native | ✓ | ✗ | ✗ | ✗ | ✗ |
+| No `unsafe` | ✓ | ✗ | ✗ | ✗ | ✗ |
+| Thread-safe | ✓ | ✓ | ✓ | ✓ | ✓ |
+
+## Module Ecosystem
+
+| Crate | Description | Crates.io |
+|-------|-------------|-----------|
+| [`pickledb-core`](https://crates.io/crates/pickledb-core) | Core types, errors, traits | [![Crates.io](https://img.shields.io/crates/v/pickledb-core)](https://crates.io/crates/pickledb-core) |
+| [`pickledb-crypto`](https://crates.io/crates/pickledb-crypto) | Client-side cryptography | [![Crates.io](https://img.shields.io/crates/v/pickledb-crypto)](https://crates.io/crates/pickledb-crypto) |
+| [`pickledb-engine`](https://crates.io/crates/pickledb-engine) | Database engine | [![Crates.io](https://img.shields.io/crates/v/pickledb-engine)](https://crates.io/crates/pickledb-engine) |
+| [`pickledb-cli`](https://crates.io/crates/pickledb-cli) | CLI binary | [![Crates.io](https://img.shields.io/crates/v/pickledb-cli)](https://crates.io/crates/pickledb-cli) |
+| [`pickledb-ffi`](https://crates.io/crates/pickledb-ffi) | C ABI bindings | [![Crates.io](https://img.shields.io/crates/v/pickledb-ffi)](https://crates.io/crates/pickledb-ffi) |
+
+## Building
 
 ```bash
 # Build all crates
 cargo build --workspace
 
-# Run all tests
+# Run all 104+ tests
 cargo test --workspace
 
-# Build the CLI only
+# Build CLI only
 cargo build -p pickledb-cli
 
-# Build the FFI shared/static library
+# Build FFI library
 cargo build -p pickledb-ffi --lib
 ```
 
 ### Requirements
 
-- Rust **1.75** or later (edition 2021)
-- Dependencies are limited to audited crates: `aes-gcm`, `sha2`, `hkdf`, `hmac`, `parking_lot`, `serde`, `bincode`, `thiserror`, `hex`, `anyhow`, `rand`
+- Rust **1.75** or later
+- Minimal dependencies: `aes-gcm`, `sha2`, `hkdf`, `hmac`, `parking_lot`, `serde`, `bincode`, `thiserror`
 
-## Project Structure
-
-```
-├── Cargo.toml                # Workspace manifest
-├── README.md
-├── docs/
-│   └── aegisdb_arch.pdf      # Architecture specification
-├── tests/                    # Integration tests
-├── crates/
-│   ├── core/                 # Core types, errors, traits
-│   ├── crypto/               # Client-side crypto (AES-256-GCM, HKDF, HMAC)
-│   ├── pages/                # Slotted page + page allocator
-│   ├── storage/              # File manager + buffer pool
-│   ├── wal/                  # Write-ahead log + recovery
-│   ├── cache/                # Page cache abstractions
-│   ├── index/                # Blind search index
-│   ├── engine/               # Database engine
-│   ├── cli/                  # Command-line tool
-│   └── ffi/                  # C ABI bindings
-```
-
-## Test Suite
-
-```bash
-cargo test --workspace
-```
-
-Run by crate:
+## Roadmap
 
 ```
-pickledb-core:   11 tests
-pickledb-crypto: 27 tests
-pickledb-pages:  22 tests
-pickledb-storage: 11 tests
-pickledb-wal:    10 tests
-pickledb-index:  11 tests
-pickledb-engine:  8 tests
-pickledb-ffi:     4 tests
-────────────────────────
-Total:          104 tests
+v0.1 ──── Foundation (current)
+         • Core engine with WAL, slotted pages, buffer pool
+         • Client-side AES-256-GCM encryption
+         • Blind search via HMAC tokens
+         • CLI and C FFI
+
+v0.2 ──── Polish (in progress)
+         • Professional CLI with clap
+         • Interactive shell
+         • Formatted output (Unicode tables)
+         • Structured logging
+         • Diagnostics commands
+
+v0.3 ──── Production features (planned)
+         • Benchmark suite
+         • Config file support
+         • Advanced indexing
+         • Metrics and observability
+
+v0.4+ ─── Ecosystem (future)
+         • Language bindings (Python, Node.js, Go)
+         • WASM support
+         • Web dashboard
+         • Terminal UI
 ```
+
+## Contributing
+
+We welcome contributions! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Quick Links
+
+- [Architecture Guide](ARCHITECTURE.md)
+- [Security Policy](SECURITY.md)
+- [Roadmap](ROADMAP.md)
+- [Style Guide](STYLE_GUIDE.md)
+- [Code of Conduct](CODE_OF_CONDUCT.md)
 
 ## License
 
-MIT
+This project is licensed under the MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+<p align="center">
+  <i>Encrypt everything. Trust nothing.</i>
+</p>

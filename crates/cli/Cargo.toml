@@ -3,6 +3,11 @@ name = "pickledb-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
+description = "PickleDB CLI - Zero-Trust Encrypted Database Engine"
+
+[[bin]]
+name = "pickledb"
+path = "src/main.rs"
 
 [dependencies]
 pickledb-core = { path = "../core" }
@@ -10,3 +15,7 @@ pickledb-engine = { path = "../engine" }
 pickledb-crypto = { path = "../crypto" }
 anyhow = "1"
 hex = "0.4"
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"
+colored = "2"
+rustyline = "14"
