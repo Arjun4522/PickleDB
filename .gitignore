@@ -27,3 +27,7 @@ Thumbs.db
 # Environment
 .env
 .env.*
+
+# Website (marketing page)
+/website/node_modules/
+/website/dist/
