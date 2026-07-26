@@ -16,9 +16,13 @@ export function Hero() {
   return (
     <section className="relative min-h-screen flex items-center overflow-hidden">
       <div className="absolute inset-0">
-        <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-emerald-500/10 blur-[120px] animate-pulse-glow" />
-        <div className="absolute bottom-1/3 right-1/4 w-[300px] h-[300px] rounded-full bg-emerald-500/5 blur-[80px] animate-pulse-glow" style={{ animationDelay: '2s' }} />
-        <div className="absolute inset-0 opacity-[0.02]">
+        {/* Depth orbs */}
+        <div className="orb w-[500px] h-[500px] bg-emerald-500 top-[15%] left-[10%] animate-drift" />
+        <div className="orb w-[350px] h-[350px] bg-cyan-500 bottom-[20%] right-[15%] animate-drift" style={{ animationDelay: '3s' }} />
+        <div className="orb w-[200px] h-[200px] bg-violet-500 top-[60%] left-[50%] animate-drift" style={{ animationDelay: '5s' }} />
+
+        {/* Grid */}
+        <div className="absolute inset-0 opacity-[0.025]">
           <div className="h-full w-full" style={{
             backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,0.5) 1px, transparent 0)',
             backgroundSize: '40px 40px',
@@ -91,10 +95,10 @@ export function Hero() {
             </div>
           </div>
 
-          <div className="hidden lg:block">
-            <div className="relative">
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/5 to-transparent rounded-2xl" />
-              <div className="relative rounded-2xl border border-border bg-pickle-900/80 backdrop-blur-sm overflow-hidden shadow-2xl">
+          <div className="hidden lg:block perspective-card">
+            <div className="relative terminal-depth">
+              <div className="absolute -inset-4 bg-gradient-to-r from-emerald-500/8 via-cyan-500/5 to-violet-500/8 rounded-3xl blur-xl opacity-60" />
+              <div className="relative rounded-2xl border border-border/60 bg-pickle-900/90 backdrop-blur-sm overflow-hidden shadow-[0_8px_60px_-12px_rgba(0,0,0,0.7)]">
                 <div className="flex items-center gap-1.5 px-4 py-3 border-b border-border bg-pickle-800/50">
                   <div className="w-2.5 h-2.5 rounded-full bg-red-500/70" />
                   <div className="w-2.5 h-2.5 rounded-full bg-yellow-500/70" />

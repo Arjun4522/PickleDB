@@ -1,6 +1,5 @@
 import { Navbar } from './components/Navbar'
 import { Hero } from './components/Hero'
-import { StatsBar } from './components/StatsBar'
 import { Features } from './components/Features'
 import { Architecture } from './components/Architecture'
 import { Security } from './components/Security'
@@ -17,7 +16,6 @@ export default function App() {
       <Navbar />
       <main>
         <Hero />
-        <StatsBar />
         <Features />
         <Architecture />
         <Security />

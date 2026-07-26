@@ -4,7 +4,7 @@ import { GithubIcon } from './ui/Icons'
 
 export function GitHubCta() {
   return (
-    <section className="relative py-24 lg:py-32">
+    <section className="relative py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -12,7 +12,7 @@ export function GitHubCta() {
           viewport={{ once: true }}
           className="max-w-lg mx-auto text-center"
         >
-          <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-6">
+          <div className="inline-flex p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 mb-6 animate-float">
             <GithubIcon className="w-6 h-6 text-emerald-400" />
           </div>
           <h2 className="font-heading text-3xl sm:text-4xl font-bold text-white tracking-tight mb-3">

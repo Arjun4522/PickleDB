@@ -20,7 +20,7 @@ const testimonials = [
 
 export function Testimonials() {
   return (
-    <section className="relative py-24 lg:py-32">
+    <section className="relative py-16 lg:py-24">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="max-w-2xl">
           <motion.div
