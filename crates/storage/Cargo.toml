@@ -8,4 +8,4 @@ license.workspace = true
 pickledb-core = { path = "../core" }
 pickledb-pages = { path = "../pages" }
 parking_lot = "0.12"
-thiserror = "1"
+thiserror = "2"
