@@ -8,7 +8,7 @@ license.workspace = true
 pickledb-core = { path = "../core" }
 aes-gcm = "0.10"
 sha2 = "0.10"
-hkdf = "0.12"
+hkdf = "0.13"
 hmac = "0.12"
 rand = "0.8"
 thiserror = "1"
