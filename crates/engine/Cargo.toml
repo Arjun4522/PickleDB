@@ -10,6 +10,6 @@ pickledb-storage = { path = "../storage" }
 pickledb-pages = { path = "../pages" }
 pickledb-wal = { path = "../wal" }
 pickledb-index = { path = "../index" }
-bincode = "1"
+bincode = "3"
 parking_lot = "0.12"
 anyhow = "1"
